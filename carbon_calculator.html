@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHG Inventory & Emission Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Import Google Fonts at the top of the <style> block */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+        /* Apply the font to the entire body */
+        body {
+            font-family: 'Poppins', Arial, sans-serif; /* Use Poppins as the primary font */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-image: url('background_min.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        .calculator {
+            background: #FFFFF0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            width: 50%;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        form label {
+            margin-top: 10px;
+        }
+        form input {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%; /* Ensure all input boxes have the same width */
+            box-sizing: border-box; /* Include padding and border in the width */
+        }
+        button {
+            background: #00796b;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #004d40;
+        }
+        .chart-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Space between bar chart and pie chart */
+        }
+        .chart-container canvas {
+            width: 100% !important;
+            height: 250px !important; /* Fixed height for both charts */
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            width: 100%; /* Ensure the tooltip container takes full width */
+        }
+
+        /* Tooltip text */
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the input */
+            left: 50%;
+            margin-left: -100px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <section class="calculator">
+        <h2>Enter Your Monthly Emissions</h2>
+        <form id="ghgForm">
+            <h3>🏡 Home Energy Usage</h3>
+            <div class="tooltip">
+                <label for="electricity">Electricity (kWh):</label>
+                <input type="number" id="electricity" required>
+                <span class="tooltiptext">
+                    To calculate electricity consumption, check your monthly electricity bill or use a smart meter.
+                </span>
+            </div>
+            <div class="tooltip">
+                <label for="gas">Natural Gas (m³):</label>
+                <input type="number" id="gas" required>
+                <span class="tooltiptext">
+                    To calculate natural gas usage, check your monthly gas bill or use a gas meter.
+                </span>
+            </div>
+            <div class="tooltip">
+                <label for="biogas">Biogas Used (m³):</label>
+                <input type="number" id="biogas" required>
+                <span class="tooltiptext">
+                    To calculate biogas usage, refer to your biogas production or consumption records.
+                </span>
+            </div>
+
+            <h3>🚗 Car Fuel Usage</h3>
+            <div class="tooltip">
+                <label for="fuel">Fuel (Liters):</label>
+                <input type="number" id="fuel" required>
+                <span class="tooltiptext">
+                    To calculate fuel consumption, check your car's fuel log or odometer readings.
+                </span>
+            </div>
+
+            <h3>☀️ Renewable Energy Usage</h3>
+            <div class="tooltip">
+                <label for="solar">Solar Energy Used (kWh):</label>
+                <input type="number" id="solar" required>
+                <span class="tooltiptext">
+                    To calculate solar energy usage, check your solar panel monitoring system or inverter logs.
+                </span>
+            </div>
+            <div class="tooltip">
+                <label for="wind">Wind Energy Used (kWh):</label>
+                <input type="number" id="wind" required>
+                <span class="tooltiptext">
+                    To calculate wind energy usage, refer to your wind turbine monitoring system or energy logs.
+                </span>
+            </div>
+            <div class="tooltip">
+                <label for="biogasOffset">Biogas Offset (m³):</label>
+                <input type="number" id="biogasOffset" required>
+                <span class="tooltiptext">
+                    To calculate biogas offset, refer to your biogas production or consumption records.
+                </span>
+            </div>
+
+            <button type="button" onclick="calculateEmissions()">Calculate</button>
+        </form>
+
+        <h3>Results</h3>
+        <p><strong>Total Emissions:</strong> <span id="totalEmissions">0</span> kg CO₂e</p>
+        <p><strong>Renewable Offsets:</strong> <span id="offsets">0</span> kg CO₂e</p>
+        <p><strong>Net Emissions:</strong> <span id="netEmissions">0</span> kg CO₂e</p>
+        <br> <br>
+
+        <h3>Emissions Visualization</h3>
+        <div class="chart-container">
+            <div>
+                <h4>Bar Chart</h4>
+                <canvas id="emissionsChart"></canvas>
+            </div>
+            <div>
+                <h4>Pie Chart</h4>
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        let emissionsChart;
+        let pieChart;
+
+        async function calculateEmissions() {
+            const formData = {
+                electricity: parseFloat(document.getElementById("electricity").value) || 0,
+                gas: parseFloat(document.getElementById("gas").value) || 0,
+                biogas: parseFloat(document.getElementById("biogas").value) || 0,
+                fuel: parseFloat(document.getElementById("fuel").value) || 0,
+                solar: parseFloat(document.getElementById("solar").value) || 0,
+                wind: parseFloat(document.getElementById("wind").value) || 0,
+                biogasOffset: parseFloat(document.getElementById("biogasOffset").value) || 0,
+            };
+            try {
+                const response = await fetch("http://localhost:3000/emission/calculate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formData),
+                });
+
+                if (!response.ok) {
+                    console.error("Failed to fetch:", response.status, response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                console.log("API Response:", data);
+
+                // Update results
+                document.getElementById("totalEmissions").textContent = data.totalEmissions;
+                document.getElementById("offsets").textContent = data.offsets;
+                document.getElementById("netEmissions").textContent = data.netEmissions;
+
+                // Render or update the charts
+                renderBarChart(data);
+                renderPieChart(data);
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        function renderBarChart(data) {
+            const ctx = document.getElementById("emissionsChart").getContext("2d");
+
+            if (emissionsChart) {
+                emissionsChart.destroy(); // Destroy existing chart if it exists
+            }
+
+            emissionsChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: ["Total Emissions", "Renewable Offsets", "Net Emissions"],
+                    datasets: [{
+                        label: "Emissions (kg CO₂e)",
+                        data: [data.totalEmissions, data.offsets, data.netEmissions],
+                        backgroundColor: ["#00796b", "#00e676", "#ff6f00"],
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                },
+            });
+        }
+
+        function renderPieChart(data) {
+            const ctx = document.getElementById("pieChart").getContext("2d");
+
+            if (pieChart) {
+                pieChart.destroy(); // Destroy existing chart if it exists
+            }
+
+            pieChart = new Chart(ctx, {
+                type: "pie",
+                data: {
+                    labels: ["Total Emissions", "Renewable Offsets", "Net Emissions"],
+                    datasets: [{
+                        label: "Emissions (kg CO₂e)",
+                        data: [data.totalEmissions, data.offsets, data.netEmissions],
+                        backgroundColor: ["#00796b", "#00e676", "#ff6f00"],
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                },
+            });
+        }
+    </script>
+</body>
+</html>
